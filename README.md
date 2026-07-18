@@ -67,19 +67,6 @@ By monitoring these metrics, the team can quickly detect performance bottlenecks
   
 
 
-## Architecture
-
-![architecture](https://github.com/agi-chan/mugshot-cafe/blob/main/graph%20crop.png?raw=true)
-
-![AWS architecture](https://github.com/agi-chan/mugshot-cafe/blob/main/aws.png?raw=true)
-
-Our solution utilizes the following AWS components:
-
-- S3: For storing raw CSV files
-- Lambda: For ETL processing
-- Redshift: As our data warehouse
-- Cloudformation: To initialise infrastructure (bucket and Lambda) from .YAML template
-- EC2
 
 ## Repository structure
 
