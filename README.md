@@ -5,6 +5,13 @@ Mugshot Coffee is a cloud-native ETL (Extract, Transform, Load) pipeline built o
 
 The project demonstrates modern Data Engineering practices including serverless computing, event-driven architecture, cloud data warehousing, Infrastructure as Code (CloudFormation), monitoring, and automated data pipelines..
 
+## Business Problem
+
+Coffee shops generate thousands of sales transactions every day. Analysing CSV files manually is time-consuming, repetitive and prone to human error.
+
+The aim of this project was to automate the entire analytics workflow so that sales data could be processed in near real time, providing business owners with reliable dashboards for monitoring revenue, customer trends and operational performance.
+
+
 ![Grafana visualisations](https://github.com/agi-chan/mugshot-coffee/blob/main/visualisations.png?raw=true)
 ![Grafana monitoring](https://github.com/agi-chan/mugshot-coffee/blob/main/monitoring.png?raw=true)
 
