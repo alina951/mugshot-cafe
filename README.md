@@ -30,9 +30,6 @@ The aim of this project was to automate the entire analytics workflow so that sa
 ## Architecture
 
 ![architecture](https://github.com/agi-chan/mugshot-cafe/blob/main/graph%20crop.png?raw=true)
-
-![AWS architecture](https://github.com/agi-chan/mugshot-cafe/blob/main/aws.png?raw=true)
-
 ## 🔄 Data Flow
 
 1. Sales transaction CSV files are uploaded to an Amazon S3 bucket.
@@ -42,7 +39,7 @@ The aim of this project was to automate the entire analytics workflow so that sa
 5. The Load Lambda retrieves messages from the queue and loads them into Amazon Redshift.
 6. Grafana queries Amazon Redshift to generate business dashboards.
 7. Amazon CloudWatch collects operational metrics which are visualised in Grafana for monitoring.
-## 🔄 Continuous Integration / Continuous Deployment (CI/CD)
+ ## 🔄 Continuous Integration / Continuous Deployment (CI/CD)
 
 The project uses **GitHub Actions** to automate parts of the development workflow.
 
@@ -54,6 +51,10 @@ The workflow performs tasks such as:
 - Supporting deployment of infrastructure and application updates
 
 Using GitHub Actions reduces manual effort, improves code quality and ensures a more reliable deployment process.
+
+![AWS architecture](https://github.com/agi-chan/mugshot-cafe/blob/main/aws.png?raw=true)
+
+
 
 ## 🚀 Solution Overview
 
@@ -134,29 +135,7 @@ The dashboard transforms raw transactional data into meaningful business insight
 | **README.md** | Provides project documentation, architecture, setup instructions and technical overview. |
 
 
-## Repository structure
 
-```
-Mugshot-Coffee/
-├── .github/
-│   └── workflows/
-│       └── action.yml
-├── Data/
-│   ├── leeds_09-05-2023_09-00-00.csv
-│   └── test_data.csv
-├── lambda-layer/
-│   └── lambda-layer.zip
-├── .env
-├── mugshot_lambda.py
-├── load_lambda.py
-├── extracttransform_lambda.py
-├── README.md
-├── connect_db.py
-├── database.sql
-├── docker-compose.yml
-├── lambdatemplate.yaml
-├── test_unit_tests.py
-```
 ### Folder/Files Description
 
  - .github/: GitHub workflows and actions
