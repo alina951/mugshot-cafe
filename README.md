@@ -1,5 +1,5 @@
 # mugshot-cafe
-# Mugshot Coffee
+
 
 ## Elevator pitch
 
