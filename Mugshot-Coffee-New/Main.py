@@ -1,3 +1,20 @@
+# ======================================================
+# MUGSHOT CAFE ETL PIPELINE
+# ======================================================
+# This script performs an ETL (Extract, Transform, Load)
+# process:
+# 1. Extracts raw sales data from a CSV file.
+# 2. Transforms the data by cleaning and restructuring it.
+# 3. Loads the cleaned data into a PostgreSQL database.
+# ======================================================
+
+# ======================================================
+# IMPORT REQUIRED LIBRARIES
+# ======================================================
+# These libraries are used to read CSV files, manipulate
+# data, connect to PostgreSQL and perform bulk inserts.
+# ======================================================
+
 import csv
 import pprint
 import pandas
@@ -10,6 +27,13 @@ from sqlalchemy import create_engine
 #Discarded attempt at sorting the key.
 #        print(row['Name'], row['Colour'], row['Age'])
 
+# ======================================================
+# EXTRACT STAGE
+# ======================================================
+# Read the raw Mugshot Coffee sales CSV file and store
+# each row as a dictionary inside a Python list.
+# ======================================================
+
 #Loading data from data source and printing
 filename = 'Data/leeds_09-05-2023_09-00-00.csv'
 keys = ('Date and time', 'Location','Name', 'Order', 'Total', 'Payment Type', 'Card Number')
@@ -20,13 +44,28 @@ with open (filename, 'r') as data:
         mugshot.append(row)
 #pprint.pprint(mugshot)
 
+# ======================================================
+# TRANSFORM STAGE
+# ======================================================
+# Clean and prepare the raw data before loading it into
+# PostgreSQL.
+# ======================================================
+
 ###Transform stage - defining functions###
+# ------------------------------------------------------
+# Remove Sensitive Customer Information
+# Removes customer names and card numbers before loading.
+# ------------------------------------------------------
 def remove_sens_data(input_data_list : list,sens_data_keys:list):
     for dicts in input_data_list:
         for key in sens_data_keys:
             if key in dicts:
                 del dicts[key]
 
+# ------------------------------------------------------
+# Split Date and Time
+# Separates the combined datetime column into Date and Time.
+# ------------------------------------------------------
 def split_date_time(input_data_list : list):
     for dicts in input_data_list:
         dt_temp = dicts["Date and time"]
@@ -36,6 +75,11 @@ def split_date_time(input_data_list : list):
         dicts["Time"] = time
         del dicts["Date and time"]
 
+# ------------------------------------------------------
+# Split Customer Orders
+# Splits each order into individual products and counts
+# duplicate items to create quantities.
+# ------------------------------------------------------
 def split_order(input_data_list : list):
     for dicts in input_data_list:
         product_dupe_tag = 0
@@ -68,9 +112,19 @@ def split_order(input_data_list : list):
         dicts["Order_dict"] = order_dicts_list
         del dicts["Order"]
 
+# ======================================================
+# LOAD STAGE
+# ======================================================
+# Insert the transformed data into PostgreSQL.
+# ======================================================
+
 ### load stage - functions ###
 
 # Function to create the sales table (if necessary)
+# ------------------------------------------------------
+# Create Database Tables
+# Reads database.sql and creates the required tables.
+# ------------------------------------------------------
 def create_sales_table(connection):
     sql_file_path = 'database.sql'
     try:
@@ -82,7 +136,8 @@ def create_sales_table(connection):
                 if command.strip():
                     cursor.execute(command)
         
-        connection.commit()
+        # Save all changes to the database
+    connection.commit()
         print("Tables successfully created from the SQL file.")
 
     except FileNotFoundError:
@@ -91,6 +146,10 @@ def create_sales_table(connection):
     #    print(f"Error creating tables: {e}")
 
 # inserting data into tables
+# ------------------------------------------------------
+# Load Data into PostgreSQL
+# Inserts transactions, products and order items.
+# ------------------------------------------------------
 def insert_data_into_db(connection, transactions_data):
     #try:
         with connection.cursor() as cursor:
@@ -201,7 +260,8 @@ def insert_data_into_db(connection, transactions_data):
                 #    transaction['Total'],
                 #    transaction['Payment Type']
                 #))
-                #connection.commit()
+                ## Save all changes to the database
+    connection.commit()
                 # Retrieve the transaction_id of the newly inserted transaction
                 #select_transaction_sql = "SELECT transaction_id FROM transactions WHERE date = %s and time = %s"
                 #cursor.execute(select_transaction_sql, (transaction["Date"],transaction['Time'],))
@@ -246,7 +306,8 @@ def insert_data_into_db(connection, transactions_data):
                 #    except:
                 #        print("key already exists")
                 #
-                #connection.commit()
+                ## Save all changes to the database
+    connection.commit()
                 #print(f"Transaction successfully inserted into database.")
     #except:
     #print("error")
@@ -273,16 +334,29 @@ def insert_data_into_db(connection, transactions_data):
 
 
 # Establish the database connection
+# ======================================================
+# EXECUTE THE ETL PIPELINE
+# ======================================================
+# Connect to PostgreSQL, execute the Transform and Load
+# stages, commit the transaction and close the connection.
+# ======================================================
+
 connection = connect.connect()
 
 if connection:
 
+    # Remove sensitive customer information
     remove_sens_data(mugshot,['Name','Card Number'])
+    # Split combined Date and Time column
     split_date_time(mugshot)
+    # Split customer orders into individual products
     split_order(mugshot)
     #create_sales_table(connection)
+    # Load transformed data into PostgreSQL
     insert_data_into_db(connection, mugshot)
+    # Save all changes to the database
     connection.commit()
+    # Close the database connection
     # Close the database connection
     connection.close()
 #for items in mugshot:
@@ -301,7 +375,8 @@ if connection:
 #                    transaction['Total'],
 #                    transaction['Payment Type']
 #                ))
-#                #connection.commit()
+#                ## Save all changes to the database
+    connection.commit()
 #                # Retrieve the transaction_id of the newly inserted transaction
 #                select_transaction_sql = "SELECT transaction_id FROM transactions WHERE date = %s and time = %s"
 #                cursor.execute(select_transaction_sql, (transaction["Date"],transaction['Time'],))
