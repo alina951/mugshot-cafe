@@ -11,6 +11,21 @@ Coffee shops generate thousands of sales transactions every day. Analysing CSV f
 
 The aim of this project was to automate the entire analytics workflow so that sales data could be processed in near real time, providing business owners with reliable dashboards for monitoring revenue, customer trends and operational performance.
 
+## 🚀 Solution Overview
+
+The ETL pipeline is built using a cloud-native, event-driven architecture on Amazon Web Services (AWS). Each stage of the pipeline is responsible for processing the data efficiently, securely and automatically.
+
+| **ETL Stage** | **AWS Service** | **Purpose** |
+|---------------|-----------------|-------------|
+| **Extract** | **Amazon S3** | Stores raw CSV transaction files and automatically triggers the ETL pipeline when new data is uploaded. |
+| **Transform** | **AWS Lambda (ExtractTransform)** | Reads the CSV file, removes sensitive information, cleans and validates the data, restructures customer orders and prepares it for loading. |
+| **Queue** | **Amazon SQS** | Decouples the transformation and loading stages, ensuring reliable message delivery and improving scalability and fault tolerance. |
+| **Load** | **AWS Lambda (Load)** | Retrieves transformed data from the SQS queue and loads it into the Amazon Redshift data warehouse. |
+| **Storage** | **Amazon Redshift** | Stores structured, analytics-ready data using a relational schema optimised for reporting and business intelligence. |
+| **Monitoring** | **Amazon CloudWatch** | Collects Lambda execution logs and performance metrics used to monitor the health of the ETL pipeline. |
+| **Visualisation** | **Grafana** | Connects to Amazon Redshift and CloudWatch to provide interactive business dashboards and operational monitoring. |
+| **Infrastructure** | **AWS CloudFormation** | Deploys and manages the AWS infrastructure using Infrastructure as Code (IaC), ensuring consistent and repeatable deployments. |
+
 
 ![Grafana visualisations](https://github.com/agi-chan/mugshot-coffee/blob/main/visualisations.png?raw=true)
 ![Grafana monitoring](https://github.com/agi-chan/mugshot-coffee/blob/main/monitoring.png?raw=true)
