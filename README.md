@@ -74,7 +74,7 @@ After the ETL pipeline extracts, transforms and loads the transaction data into 
 | **Products Sold by Location** | Compares the total number of products sold across different coffee shop locations. | Enables managers to compare branch performance, identify high-performing stores and allocate resources effectively. |
 | **Products Sold by Product** | Displays the distribution of products sold across the menu. | Identifies the most popular products, helping with stock management, supplier planning and promotional campaigns. |
 
-![Grafana visualisations](https://github.com/agi-chan/mugshot-coffee/blob/main/visualisations.png?raw=true)
+
 
 ### Business Benefits
 
