@@ -11,6 +11,20 @@ Coffee shops generate thousands of sales transactions every day. Analysing CSV f
 
 The aim of this project was to automate the entire analytics workflow so that sales data could be processed in near real time, providing business owners with reliable dashboards for monitoring revenue, customer trends and operational performance.
 
+## Architecture
+
+![architecture](https://github.com/agi-chan/mugshot-cafe/blob/main/graph%20crop.png?raw=true)
+
+![AWS architecture](https://github.com/agi-chan/mugshot-cafe/blob/main/aws.png?raw=true)
+
+Our solution utilizes the following AWS components:
+
+- S3: For storing raw CSV files
+- Lambda: For ETL processing
+- Redshift: As our data warehouse
+- Cloudformation: To initialise infrastructure (bucket and Lambda) from .YAML template
+- EC2
+
 ## 🚀 Solution Overview
 
 The ETL pipeline is built using a cloud-native, event-driven architecture on Amazon Web Services (AWS). Each stage of the pipeline is responsible for processing the data efficiently, securely and automatically.
@@ -37,14 +51,7 @@ The ETL pipeline is built using a cloud-native, event-driven architecture on Ama
 - Colvin S <a href="https://www.github.com/csrs42" target="_blank">@csrs42</a>
 - Alex H <a href="https://www.github.com/agi-chan" target="_blank">@agi-chan</a>
   
-## Project overview
 
-Our ETL pipeline processes data through the following stages:
-
-1. Extract: Retrieve data from CSV files which are uploaded to an S3 bucket
-2. Transform: Normalise and clean the data in ExtractTransform Lambda.
-3. Load: Data is sent to Load Lambda, which is then sent to a Redshift database
-4. Visualise: Present insights through Grafana dashboards
 
 ## Architecture
 
