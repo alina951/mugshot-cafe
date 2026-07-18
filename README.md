@@ -41,7 +41,6 @@ The ETL pipeline is built using a cloud-native, event-driven architecture on Ama
 | **Infrastructure** | **AWS CloudFormation** | Deploys and manages the AWS infrastructure using Infrastructure as Code (IaC), ensuring consistent and repeatable deployments. |
 
 
-![Grafana visualisations](https://github.com/agi-chan/mugshot-coffee/blob/main/visualisations.png?raw=true)
 
 ## 📊 Operational Monitoring
 
@@ -58,6 +57,35 @@ By monitoring these metrics, the team can quickly detect performance bottlenecks
 
 ![Grafana monitoring](https://github.com/agi-chan/mugshot-coffee/blob/main/monitoring.png?raw=true)
 
+
+
+## 📊 Business Intelligence Dashboard
+
+After the ETL pipeline extracts, transforms and loads the transaction data into **Amazon Redshift**, **Grafana** connects to the data warehouse to provide interactive dashboards. These dashboards enable business users to monitor sales performance, identify trends and make data-driven decisions without manually analysing raw CSV files.
+
+![Grafana Business Dashboard](https://github.com/agi-chan/mugshot-coffee/blob/main/visualisations.png?raw=true)
+
+### Dashboard Overview
+
+| **Dashboard** | **Description** | **Business Value** |
+|---------------|-----------------|--------------------|
+| **Daily Revenue** | Displays the total revenue generated each day. | Helps identify revenue trends, peak trading days and unexpected drops in sales. |
+| **Products Sold by Date** | Shows the total number of products sold each day. | Supports demand forecasting, inventory planning and staffing decisions. |
+| **Products Sold by Location** | Compares the total number of products sold across different coffee shop locations. | Enables managers to compare branch performance, identify high-performing stores and allocate resources effectively. |
+| **Products Sold by Product** | Displays the distribution of products sold across the menu. | Identifies the most popular products, helping with stock management, supplier planning and promotional campaigns. |
+
+![Grafana visualisations](https://github.com/agi-chan/mugshot-coffee/blob/main/visualisations.png?raw=true)
+
+### Business Benefits
+
+The dashboard transforms raw transactional data into meaningful business insights by enabling stakeholders to:
+
+- Monitor daily sales performance in near real time.
+- Identify best-selling products and customer purchasing trends.
+- Compare sales performance across multiple store locations.
+- Support inventory management and demand forecasting.
+- Make informed business decisions based on accurate, up-to-date data.
+- Eliminate the need for manual analysis of CSV files through automated reporting.
 ## Team members
 
 - Liam D <a href="https://www.github.com/Liam-Dignum" target="_blank">@Liam-Dignum</a>
