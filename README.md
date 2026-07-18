@@ -4,6 +4,22 @@
 Mugshot Coffee is a cloud-native ETL (Extract, Transform, Load) pipeline built on Amazon Web Services (AWS). The solution automates the processing of coffee shop sales transactions by extracting raw CSV files, transforming and cleaning the data, loading it into Amazon Redshift, and presenting business insights through Grafana dashboards.
 
 The project demonstrates modern Data Engineering practices including serverless computing, event-driven architecture, cloud data warehousing, Infrastructure as Code (CloudFormation), monitoring, and automated data pipelines..
+## 🛠️ Technology Stack
+
+| Category | Technologies |
+|----------|--------------|
+| Programming | Python |
+| Cloud Platform | Amazon Web Services (AWS) |
+| Storage | Amazon S3 |
+| Compute | AWS Lambda, Amazon EC2 |
+| Messaging | Amazon SQS |
+| Data Warehouse | Amazon Redshift |
+| Monitoring | Amazon CloudWatch |
+| Visualisation | Grafana |
+| Infrastructure as Code | AWS CloudFormation (YAML) |
+| CI/CD | GitHub Actions |
+| Containerisation | Docker |
+| Version Control | Git & GitHub |
 
 ## Business Problem
 
@@ -17,13 +33,27 @@ The aim of this project was to automate the entire analytics workflow so that sa
 
 ![AWS architecture](https://github.com/agi-chan/mugshot-cafe/blob/main/aws.png?raw=true)
 
-Our solution utilizes the following AWS components:
+## 🔄 Data Flow
 
-- S3: For storing raw CSV files
-- Lambda: For ETL processing
-- Redshift: As our data warehouse
-- Cloudformation: To initialise infrastructure (bucket and Lambda) from .YAML template
-- EC2
+1. Sales transaction CSV files are uploaded to an Amazon S3 bucket.
+2. S3 automatically triggers the ExtractTransform AWS Lambda function.
+3. The Lambda function extracts, cleans and transforms the raw transaction data.
+4. The transformed records are sent to Amazon SQS for reliable message processing.
+5. The Load Lambda retrieves messages from the queue and loads them into Amazon Redshift.
+6. Grafana queries Amazon Redshift to generate business dashboards.
+7. Amazon CloudWatch collects operational metrics which are visualised in Grafana for monitoring.
+## 🔄 Continuous Integration / Continuous Deployment (CI/CD)
+
+The project uses **GitHub Actions** to automate parts of the development workflow.
+
+The workflow performs tasks such as:
+
+- Running automated checks
+- Executing unit tests
+- Validating application code
+- Supporting deployment of infrastructure and application updates
+
+Using GitHub Actions reduces manual effort, improves code quality and ensures a more reliable deployment process.
 
 ## 🚀 Solution Overview
 
@@ -86,14 +116,22 @@ The dashboard transforms raw transactional data into meaningful business insight
 - Support inventory management and demand forecasting.
 - Make informed business decisions based on accurate, up-to-date data.
 - Eliminate the need for manual analysis of CSV files through automated reporting.
-## Team members
 
-- Liam D <a href="https://www.github.com/Liam-Dignum" target="_blank">@Liam-Dignum</a>
-- Alina A <a href="https://www.github.com/alina951" target="_blank">@alina951</a>
-- Colvin S <a href="https://www.github.com/csrs42" target="_blank">@csrs42</a>
-- Alex H <a href="https://www.github.com/agi-chan" target="_blank">@agi-chan</a>
-  
+## 📁 Repository Structure
 
+| **File / Folder** | **Purpose** |
+|-------------------|-------------|
+| **.github/workflows/** | Contains GitHub Actions workflows used for Continuous Integration (CI) and automated project validation. |
+| **Data/** | Stores raw and sample CSV transaction data used for testing and ETL processing. |
+| **lambda-layer/** | Contains shared Python dependencies packaged for AWS Lambda functions. |
+| **extracttransform_lambda.py** | Extracts raw CSV data from Amazon S3, cleans and transforms the data before sending it to Amazon SQS. |
+| **load_lambda.py** | Retrieves transformed messages from Amazon SQS and loads the processed data into Amazon Redshift. |
+| **connect_db.py** | Establishes connections to the database and manages database communication. |
+| **database.sql** | Defines the relational database schema, including tables, relationships and constraints. |
+| **lambdatemplate.yaml** | AWS CloudFormation template used to automatically provision and configure the AWS infrastructure. |
+| **docker-compose.yml** | Creates the local development environment using Docker containers. |
+| **test_unit_tests.py** | Contains automated unit tests used to validate the ETL pipeline and application logic. |
+| **README.md** | Provides project documentation, architecture, setup instructions and technical overview. |
 
 
 ## Repository structure
@@ -159,6 +197,41 @@ Mugshot-Coffee/
    - aws cloudformation create-stack --stack-name mugshot-coffee --template-body file://lambdatemplate.yaml
 6. Run the application
    - python Main.py
+##  Challenges
+
+During development we encountered several challenges:
+
+- Transforming nested transaction data into a relational structure.
+- Splitting customer orders into individual products while maintaining data integrity.
+- Integrating multiple AWS services into an event-driven architecture.
+- Designing a scalable ETL pipeline using serverless technologies.
+- Monitoring and troubleshooting Lambda performance using CloudWatch and Grafana.
+ ##  Future Improvements
+
+Potential enhancements include:
+
+- Implementing Dead Letter Queues (DLQs)
+- Adding automated data validation
+  
+  
+ ##  Key Learning Outcomes
+
+This project strengthened my understanding of:
+
+- Building end-to-end ETL pipelines
+- Event-driven architectures
+- Serverless computing with AWS Lambda
+- Cloud data warehousing using Amazon Redshift
+- Infrastructure as Code using CloudFormation
+- CI/CD using GitHub Actions
+- Monitoring cloud applications with CloudWatch and Grafana
+- Collaborating within an Agile development team using GitHub
+## Team members
+
+- Liam D <a href="https://www.github.com/Liam-Dignum" target="_blank">@Liam-Dignum</a>
+- Alina A <a href="https://www.github.com/alina951" target="_blank">@alina951</a>
+- Colvin S <a href="https://www.github.com/csrs42" target="_blank">@csrs42</a>
+- Alex H <a href="https://www.github.com/agi-chan" target="_blank">@agi-chan</a>
 
 ### License
 This project is licensed under the MIT License. See the LICENSE file for details.
