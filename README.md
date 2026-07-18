@@ -42,6 +42,20 @@ The ETL pipeline is built using a cloud-native, event-driven architecture on Ama
 
 
 ![Grafana visualisations](https://github.com/agi-chan/mugshot-coffee/blob/main/visualisations.png?raw=true)
+
+## 📊 Operational Monitoring
+
+To ensure the ETL pipeline is reliable, scalable and performing efficiently, we monitor AWS Lambda using **Amazon CloudWatch**, with metrics visualised in **Grafana**. These dashboards provide real-time insights into the health and performance of the serverless pipeline.
+
+| **Metric** | **What it Measures** | **Why it Matters** |
+|------------|----------------------|--------------------|
+| **Concurrent Executions** | The number of Lambda functions running simultaneously. | Helps identify workload patterns and ensures the application can scale efficiently during periods of high demand. |
+| **Average Duration** | The average time taken for a Lambda function to complete execution. | Measures the performance of the ETL pipeline and helps identify slow-running functions that may require optimisation. |
+| **Errors** | The number of failed Lambda executions. | Enables rapid identification and troubleshooting of issues, improving the reliability and stability of the pipeline. |
+| **Invocations** | The total number of times a Lambda function has been triggered. | Confirms that incoming CSV files are being processed correctly and provides visibility into overall pipeline activity. |
+
+By monitoring these metrics, the team can quickly detect performance bottlenecks, identify failures, optimise resource usage and maintain a reliable, production-ready ETL pipeline.
+
 ![Grafana monitoring](https://github.com/agi-chan/mugshot-coffee/blob/main/monitoring.png?raw=true)
 
 ## Team members
