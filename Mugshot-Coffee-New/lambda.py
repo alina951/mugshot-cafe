@@ -1,82 +1,158 @@
-import json
-import boto3 # library used to access AWS API
-import os
-import csv
-import psycopg2
-import psycopg2.extras
-from connect_db import *
+# ======================================================
+# MUGSHOT COFFEE ETL PIPELINE
+# ======================================================
+# This script performs an ETL (Extract, Transform, Load)
+# process:
+# 1. Extracts raw sales data from a CSV file.
+# 2. Transforms the data by cleaning and restructuring it.
+# 3. Loads the cleaned data into a PostgreSQL database.
+# ======================================================
 
-def lambda_handler(event, context):
-    # TODO implement
-    ssm_name = 'mugshot_cafe_redshift_settings'
-    os.chdir('/tmp')
-    
-    s3 = boto3.resource('s3')
-    filename = event["Records"][0]["s3"]["object"]["key"] 
-    bucket = event["Records"][0]["s3"]["bucket"]["name"]
-    s3.Bucket(bucket).download_file(filename,"data.csv")
-    print(filename)
-    #s3.Bucket("mugshotbucket").download_file("london_piccadilly_03-07-2024_09-00-00.csv",'data.csv')
-    #Loading data from data source and printing
-    #filename = 'data.csv'
-    keys = ('Date and time', 'Location','Name', 'Order', 'Total', 'Payment Type', 'Card Number')
-    with open ("data.csv", 'r') as data:
-        reader = csv.DictReader(data,keys)
-        mugshot = list()
-        for row in reader:
-            mugshot.append(row)
-    
-    ###Transform stage - defining functions###
-    def remove_sens_data(input_data_list : list,sens_data_keys:list):
-        for dicts in input_data_list:
-            for key in sens_data_keys:
-                if key in dicts:
-                    del dicts[key]
-    
-    def split_date_time(input_data_list : list):
-        for dicts in input_data_list:
-            dt_temp = dicts["Date and time"]
-            date = dt_temp[0:10]
-            time = dt_temp[11:16]
-            dicts["Date"] = date
-            dicts["Time"] = time
-            del dicts["Date and time"]
-    
-    def split_order(input_data_list : list):
-        for dicts in input_data_list:
+# ======================================================
+# IMPORT REQUIRED LIBRARIES
+# ======================================================
+# These libraries are used to read CSV files, manipulate
+# data, connect to PostgreSQL and perform bulk inserts.
+# ======================================================
+
+import csv
+import pprint
+import pandas
+import psycopg2.extras
+import connect
+import psycopg2
+from sqlalchemy import create_engine
+
+
+#Discarded attempt at sorting the key.
+#        print(row['Name'], row['Colour'], row['Age'])
+
+# ======================================================
+# EXTRACT STAGE
+# ======================================================
+# Read the raw Mugshot Coffee sales CSV file and store
+# each row as a dictionary inside a Python list.
+# ======================================================
+
+#Loading data from data source and printing
+filename = 'Data/leeds_09-05-2023_09-00-00.csv'
+keys = ('Date and time', 'Location','Name', 'Order', 'Total', 'Payment Type', 'Card Number')
+with open (filename, 'r') as data:
+    reader = csv.DictReader(data,keys)
+    mugshot = list()
+    for row in reader:
+        mugshot.append(row)
+#pprint.pprint(mugshot)
+
+# ======================================================
+# TRANSFORM STAGE
+# ======================================================
+# Clean and prepare the raw data before loading it into
+# PostgreSQL.
+# ======================================================
+
+###Transform stage - defining functions###
+# ------------------------------------------------------
+# Remove Sensitive Customer Information
+# Removes customer names and card numbers before loading.
+# ------------------------------------------------------
+def remove_sens_data(input_data_list : list,sens_data_keys:list):
+    for dicts in input_data_list:
+        for key in sens_data_keys:
+            if key in dicts:
+                del dicts[key]
+
+# ------------------------------------------------------
+# Split Date and Time
+# Separates the combined datetime column into Date and Time.
+# ------------------------------------------------------
+def split_date_time(input_data_list : list):
+    for dicts in input_data_list:
+        dt_temp = dicts["Date and time"]
+        date = dt_temp[0:10]
+        time = dt_temp[11:16]
+        dicts["Date"] = date
+        dicts["Time"] = time
+        del dicts["Date and time"]
+
+# ------------------------------------------------------
+# Split Customer Orders
+# Splits each order into individual products and counts
+# duplicate items to create quantities.
+# ------------------------------------------------------
+def split_order(input_data_list : list):
+    for dicts in input_data_list:
+        product_dupe_tag = 0
+        order_dicts_list=[]
+        split_order_list = dicts["Order"].split(", ")
+        for orders in split_order_list:
             product_dupe_tag = 0
-            order_dicts_list=[]
-            split_order_list = dicts["Order"].split(", ")
-            for orders in split_order_list:
+            #order_list.append(orders.split(" - "))
+            templist = orders.split(" - ")
+            if len(templist)>2:
+                price = templist[len(templist)-1]
+                name = ""
+                for items in templist:  
+                    if items != price:
+                        name += items
+                    name +=" "
+                    name.rstrip()
+            else:
+                name = templist[0]
+                price = templist[1]
+            for products in order_dicts_list:
+                if products["Name"] == name:
+                    products["Quantity"] = products["Quantity"] + 1
+                    product_dupe_tag=1
+            if product_dupe_tag !=1:
+                quantity = 1
+                order_dicts_list.append({"Name":name,"Price":price,"Quantity":quantity})
                 product_dupe_tag = 0
-                #order_list.append(orders.split(" - "))
-                templist = orders.split(" - ")
-                if len(templist)>2:
-                    price = templist[len(templist)-1]
-                    name = ""
-                    for items in templist:  
-                        if items != price:
-                            name += items
-                        name +=" "
-                        name.rstrip()
-                else:
-                    name = templist[0]
-                    price = templist[1]
-                for products in order_dicts_list:
-                    if products["Name"] == name:
-                        products["Quantity"] = products["Quantity"] + 1
-                        product_dupe_tag=1
-                if product_dupe_tag !=1:
-                    quantity = 1
-                    order_dicts_list.append({"Name":name,"Price":price,"Quantity":quantity})
-                    product_dupe_tag = 0
-                    
-    
-            dicts["Order_dict"] = order_dicts_list
-            del dicts["Order"]
-    def insert_data_into_db(connection,cursor, transactions_data):
-    #try:
+
+        dicts["Order_dict"] = order_dicts_list
+        del dicts["Order"]
+
+# ======================================================
+# LOAD STAGE
+# ======================================================
+# Insert the transformed data into PostgreSQL.
+# ======================================================
+
+### load stage - functions ###
+
+# Function to create the sales table (if necessary)
+# ------------------------------------------------------
+# Create Database Tables
+# Reads database.sql and creates the required tables.
+# ------------------------------------------------------
+def create_sales_table(connection):
+    sql_file_path = 'database.sql'
+    try:
+        with open(sql_file_path, 'r') as file:
+            sql_commands = file.read()
+
+        with connection.cursor() as cursor:
+            for command in sql_commands.split(';'):
+                if command.strip():
+                    cursor.execute(command)
         
+        # Save all changes to the database
+    connection.commit()
+        print("Tables successfully created from the SQL file.")
+
+    except FileNotFoundError:
+        print(f"Error: The file '{sql_file_path}' was not found.")
+    #except pymysql.Error as e:
+    #    print(f"Error creating tables: {e}")
+
+# inserting data into tables
+# ------------------------------------------------------
+# Load Data into PostgreSQL
+# Inserts transactions, products and order items.
+# ------------------------------------------------------
+def insert_data_into_db(connection, transactions_data):
+    #try:
+        with connection.cursor() as cursor:
             print("insert started")
             transaction_values = []
             product_values = []
@@ -96,8 +172,6 @@ def lambda_handler(event, context):
                 INSERT INTO products (product_name,product_price)
                 VALUES (%s, %s)
                 """
-                
-            
             
             select_transaction_sql = "select transaction_id,time FROM transactions where date = %s and city = %s"
             for transaction in transactions_data:
@@ -108,21 +182,26 @@ def lambda_handler(event, context):
                     transaction['Total'],
                     transaction['Payment Type']))
             print("starting execute")
-            #psycopg2.extras.execute_batch(cursor,insert_transaction_sql,transaction_values,page_size=100)
+            df = pandas.DataFrame(transaction_values)
+            df.columns =['date','time','city','total_cost','payment_method']
+            print(df)
+            df.to_sql("transactions",con=connection,index=False)
+            cursor.commit()
+        
+
+
+
+
+
+
+
+            psycopg2.extras.execute_batch(cursor,insert_transaction_sql,transaction_values,page_size=100)
             #cursor.executemany(insert_transaction_sql,transaction_values)
-            with open ("/tmp/transactions_data.csv","w",newline='') as f:
+            print("transactions complete")
+            with open ("transactions_data.csv","w",newline='') as f:
                 csv_writer = csv.writer(f)
                 csv_writer.writerow(["date","time","city","total_cost","payment_method"]) # write headers
                 csv_writer.writerows(transaction_values)
-            s3 = boto3.resource('s3')
-            bucket = s3.Bucket('mugshotbucketoutput')
-            key = 'lambda_outputs/transaction_'+ filename
-            bucket.upload_file('/tmp/transactions_data.csv', key)
-            print('file uploaded')
-            copy_sql = "COPY transactions (date, time, city, total_cost, payment_method) FROM %s iam_role 'arn:aws:iam::992382716453:role/RedshiftS3Role' delimiter ',' IGNOREHEADER 1"
-            bucket_filename ="s3://mugshotbucketoutput/" + key
-            cursor.execute(copy_sql,(bucket_filename,))
-            print("transactions complete")
             cursor.execute(select_transaction_sql, (transactions_data[0]["Date"],transactions_data[0]['Location'],))
             transaction_id_list = cursor.fetchall()
             for transaction in transactions_data:
@@ -144,21 +223,7 @@ def lambda_handler(event, context):
             else:
                 insert_prods = unique_prods
             if len(insert_prods) > 0:
-                a=1
-                with open ("/tmp/products_data.csv","w",newline='') as f:
-                    csv_writer = csv.writer(f)
-                    csv_writer.writerow(["product_id","product_name","product_price"]) # write headers
-                    csv_writer.writerows(insert_prods)
-                s3 = boto3.resource('s3')
-                bucket = s3.Bucket('mugshotbucketoutput')
-                key = 'lambda_outputs/products_' + filename
-                bucket.upload_file('/tmp/products_data.csv', key)
-                print("csv output")
-                copy_sql = "COPY products (product_name,product_price) FROM %s iam_role 'arn:aws:iam::992382716453:role/RedshiftS3Role' delimiter ',' IGNOREHEADER 1"
-                bucket_filename ="s3://mugshotbucketoutput/" + key
-                cursor.execute(copy_sql,(bucket_filename,))
-                #psycopg2.extras.execute_batch(cursor,insert_products_sql,insert_prods,page_size=100)
-                
+                psycopg2.extras.execute_batch(cursor,insert_products_sql,insert_prods,page_size=100)
             cursor.execute(select_product_sql)
             print("products complete")
             product_id_list = cursor.fetchall()
@@ -173,116 +238,181 @@ def lambda_handler(event, context):
                     product_quantity = orders["Quantity"]
                     order_items_list.append((transaction_id,product_id,product_quantity))
         
-            #psycopg2.extras.execute_batch(cursor,insert_order_item_sql,order_items_list,page_size=100)
-            
-        
+            psycopg2.extras.execute_batch(cursor,insert_order_item_sql,order_items_list,page_size=100)
             print("order items complete")
-            with open ("/tmp/order_items_data.csv","w",newline='') as f:
-                csv_writer = csv.writer(f)
-                csv_writer.writerow(["transaction_id","product_id","product_quantity_"]) # write headers
-                csv_writer.writerows(order_items_list)
-            s3 = boto3.resource('s3')
-            bucket = s3.Bucket('mugshotbucketoutput')
-            key = 'lambda_outputs/order_items_' + filename
-            bucket.upload_file('/tmp/order_items_data.csv', key)
-            print("csv output")
-            copy_sql = "COPY order_items (transaction_id,product_id,product_quantity) FROM %s iam_role 'arn:aws:iam::992382716453:role/RedshiftS3Role' delimiter ',' IGNOREHEADER 1"
-            bucket_filename ="s3://mugshotbucketoutput/" + key
-            cursor.execute(copy_sql,(bucket_filename,))   
+            
 
-             
-            #with open ("/tmp/transactions_data.csv","w",newline='') as f:
-            #    csv_writer = csv.writer(f)
-            #    csv_writer.writerow(["date","time","city","total_cost","payment_method"]) # write headers
-            #    csv_writer.writerows(transaction_values)
-            #print("file created")
-            #with open ("/tmp/products_data.csv","w",newline='') as f:
-            #    csv_writer = csv.writer(f)
-            #    csv_writer.writerow(["product_id","product_name","product_price"]) # write headers
-            #    csv_writer.writerows(insert_prods)
-            #print("file created")
-            #with open ("/tmp/order_items_data.csv","w",newline='') as f:
-            #    csv_writer = csv.writer(f)
-            #    csv_writer.writerow(["transaction_id","product_id","product_quantity_"]) # write headers
-            #    csv_writer.writerows(order_items_list)
-            #print("file created")
-            #s3 = boto3.resource('s3')
-            #bucket = s3.Bucket('mugshotbucketoutput')
-            #key = 'lambda_outputs/transaction.csv'
-            #bucket.upload_file('/tmp/transactions_data.csv', key)
-            #print("csv output")
-            #s3 = boto3.resource('s3')
-            #bucket = s3.Bucket('mugshotbucketoutput')
-            #key = 'lambda_outputs/order_items.csv'
-            #bucket.upload_file('/tmp/order_items_data.csv', key)
-            #print("csv output")
-            #s3 = boto3.resource('s3')
-            #bucket = s3.Bucket('mugshotbucketoutput')
-            #key = 'lambda_outputs/products_data.csv'
-            #bucket.upload_file('/tmp/products_data.csv', key)
-            #print("csv output")
-            #bucket = 'mugshotbucketoutput'
-            #filename = 'output.txt'
-            #client = boto3.client('s3')
-            #text = 'date,time,city,total_cost,payment_method\n' + str(transaction_values)
-            #response = client.put_object(
-            #    Body=text
-            #    Bucket=bucket,
-            #    Key=filename
-            #)    
-            print("file created")
-        
-    
-        
-    remove_sens_data(mugshot,['Name','Card Number'])
-    split_date_time(mugshot)
-    split_order(mugshot)
-    #bucket = 'mugshotbucketoutput'
-    #filename = 'output.txt'
-    #client = boto3.client('s3')
-    #response = client.put_object(
-    #    Body=str(mugshot),
-    #    Bucket=bucket,
-    #    Key=filename
-    #)    
-    redshift_details = get_ssm_param(ssm_name)
-    connection, cursor = open_sql_database_connection_and_cursor(redshift_details)
-    
-    #create_db_sql = """
-    #            CREATE DATABASE mugshot_coffee;
-    #            """
-    #create_tables_sql = """
-    #            CREATE TABLE products (
-    #            product_id int identity(1,1) PRIMARY KEY,
-    #            product_name VARCHAR(255) NOT NULL,
-    #            product_price FLOAT NOT NULL
-    #            );
-    #            
-    #            CREATE TABLE transactions(
-    #            transaction_id int identity(1,1) NOT NULL primary key,
-    #            date VARCHAR(255) NOT NULL,
-    #            time VARCHAR(255) NOT NULL,
-    #            city VARCHAR(255) NOT NULL,
-    #            total_cost FLOAT NOT NULL,
-    #            payment_method VARCHAR(4) NOT NULL
-    #            );
-    #            
-    #            CREATE TABLE order_items(
-    #            transaction_id INT NOT NULL,
-    #            product_id INT NOT NULL ,
-    #            product_quantity INT NOT NULL,
-    #            PRIMARY KEY(transaction_id,product_id),
-    #            FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id),
-    #            FOREIGN KEY (product_id) REFERENCES products(product_id)
-    #            );
-    #            """
-    #cursor.execute(create_tables_sql)
-    insert_data_into_db(connection,cursor,mugshot)
+
+
+
+
+
+
+                    
+
+
+
+
+                #cursor.execute(insert_transaction_sql, (
+                #    transaction['Date'],
+                #    transaction['Time'],
+                #    transaction['Location'],
+                #    transaction['Total'],
+                #    transaction['Payment Type']
+                #))
+                ## Save all changes to the database
     connection.commit()
-    print("connection complete")
-        
-    return {
-        'statusCode': 200,
-        'body': json.dumps('Hello from Lambda!'),
-        'mugshot': mugshot[0]
-    }
+                # Retrieve the transaction_id of the newly inserted transaction
+                #select_transaction_sql = "SELECT transaction_id FROM transactions WHERE date = %s and time = %s"
+                #cursor.execute(select_transaction_sql, (transaction["Date"],transaction['Time'],))
+                #
+                #transaction_id = cursor.fetchone()
+#
+                #for product in transaction['Order_dict']:
+                #    product_name = product['Name']
+                #    product_price = product['Price']
+                #    product_quantity = product['Quantity']
+#
+                #    # check if the product already exists in products table
+                #    select_product_sql = "SELECT product_id FROM products WHERE product_name = %s"
+                #    try: 
+                #        cursor.execute(select_product_sql, (product_name,))
+                #        result = cursor.fetchone()
+                #    except Exception as e:
+                #        print(f'Error {e}')
+                #        print('error here')
+                #        connection.rollback()
+#
+                #    if result:
+                #        product_id = result[0]
+                #        
+#
+                #    else:
+                #        # Insert product into products table
+                #        insert_product_sql = "INSERT INTO products (product_name, product_price) VALUES (%s, %s)"
+                #        cursor.execute(insert_product_sql, (product_name, product_price))
+                #        select_product_id_sql = "SELECT product_id FROM products WHERE product_name = %s and product_price = %s"
+                #        cursor.execute(select_product_id_sql, (product_name,product_price))
+                #        product_id = cursor.fetchone()
+                #        
+#
+                #    # Insert into order_items table
+                #    insert_order_item_sql = """
+                #    INSERT INTO order_items (transaction_id, product_id, product_quantity)
+                #    VALUES (%s, %s, %s)
+                #    """
+                #    try:
+                #        cursor.execute(insert_order_item_sql, [transaction_id, product_id, product_quantity])
+                #    except:
+                #        print("key already exists")
+                #
+                ## Save all changes to the database
+    connection.commit()
+                #print(f"Transaction successfully inserted into database.")
+    #except:
+    #print("error")
+    #except pymysql.Error as e:
+    #    connection.rollback()
+    #    print(f"Error inserting data into database: {e}")
+
+
+# Function to establish a database connection
+#def get_database_connection():
+#    try:
+#        connection = pymysql.connect(
+#            host='localhost',
+#            user='postgres',
+#            password='example',
+#            db='mugshot_coffee',
+#            charset='utf8mb4',  # Adjust charset if needed
+#            cursorclass=pymysql.cursors.DictCursor  # Adjust cursor class if needed
+#        )
+#        return connection
+#    except pymysql.Error as e:
+#        print(f"Error connecting to the database: {e}")
+#        return None
+
+
+# Establish the database connection
+# ======================================================
+# EXECUTE THE ETL PIPELINE
+# ======================================================
+# Connect to PostgreSQL, execute the Transform and Load
+# stages, commit the transaction and close the connection.
+# ======================================================
+
+connection = connect.connect()
+
+if connection:
+
+    # Remove sensitive customer information
+    remove_sens_data(mugshot,['Name','Card Number'])
+    # Split combined Date and Time column
+    split_date_time(mugshot)
+    # Split customer orders into individual products
+    split_order(mugshot)
+    #create_sales_table(connection)
+    # Load transformed data into PostgreSQL
+    insert_data_into_db(connection, mugshot)
+    # Save all changes to the database
+    connection.commit()
+    # Close the database connection
+    # Close the database connection
+    connection.close()
+#for items in mugshot:
+#    print(items)
+    
+#for transaction in transactions_data:
+#                # insert a single transaction  into transactions table # prepared sql statement with placeholders for values # it excute sql command 
+#                insert_transaction_sql = """
+#                INSERT INTO transactions (date, time, city, total_cost, payment_method) 
+#                VALUES (%s, %s, %s, %s, %s)
+#                """
+#                cursor.execute(insert_transaction_sql, (
+#                    transaction['Date'],
+#                    transaction['Time'],
+#                    transaction['Location'],
+#                    transaction['Total'],
+#                    transaction['Payment Type']
+#                ))
+#                ## Save all changes to the database
+    connection.commit()
+#                # Retrieve the transaction_id of the newly inserted transaction
+#                select_transaction_sql = "SELECT transaction_id FROM transactions WHERE date = %s and time = %s"
+#                cursor.execute(select_transaction_sql, (transaction["Date"],transaction['Time'],))
+#                transaction_id = cursor.fetchone()
+#
+#                for product in transaction['Order_dict']:
+#                    product_name = product['Name']
+#                    product_price = product['Price']
+#                    product_quantity = product['Quantity']
+#
+#                    # check if the product already exists in products table
+#                    select_product_sql = "SELECT product_id FROM products WHERE product_name = %s"
+#                    cursor.execute(select_product_sql, (product_name,))
+#                    result = cursor.fetchone()
+#
+#                    if result:
+#                        product_id = result[0]
+#                        
+#
+#                    else:
+#                        # Insert product into products table
+#                        insert_product_sql = "INSERT INTO products (product_name, product_price) VALUES (%s, %s)"
+#                        cursor.execute(insert_product_sql, (product_name, product_price))
+#                        select_product_id_sql = "SELECT product_id FROM products WHERE product_name = %s and product_price = %s"
+#                        cursor.execute(select_product_id_sql, (product_name,product_price))
+#                        product_id = cursor.fetchone()
+#                        
+#
+#                    # Insert into order_items table
+#                    insert_order_item_sql = """
+#                    INSERT INTO order_items (transaction_id, product_id, product_quantity)
+#                    VALUES (%s, %s, %s)
+#                    """
+#                    try:
+#                        cursor.execute(insert_order_item_sql, [transaction_id, product_id, product_quantity])
+#                    except:
+#                        print("key already exists")
+#
+#                print(f"Transaction {transaction_id} successfully inserted into database.")
